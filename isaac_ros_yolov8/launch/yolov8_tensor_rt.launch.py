@@ -31,37 +31,38 @@ def generate_launch_description():
     # By default loads and runs mobilenetv2-1.0 included in isaac_ros_dnn_inference/models
     launch_args = [
         DeclareLaunchArgument(
-            'model_file_path',
-            default_value='',
-            description='The absolute file path to the ONNX file'),
+            'input_image_width',
+            default_value='1920',
+            description='The input image width'),
         DeclareLaunchArgument(
-            'engine_file_path',
-            default_value='',
-            description='The absolute file path to the TensorRT engine file'),
+            'input_image_height',
+            default_value='1200',
+            description='The input image height'),
         DeclareLaunchArgument(
-            'input_tensor_names',
-            default_value='["input_tensor"]',
-            description='A list of tensor names to bound to the specified input binding names'),
+            'network_image_width',
+            default_value='640',
+            description='The input image width that the network expects'),
         DeclareLaunchArgument(
-            'input_binding_names',
-            default_value='[""]',
-            description='A list of input tensor binding names (specified by model)'),
+            'network_image_height',
+            default_value='640',
+            description='The input image height that the network expects'),
         DeclareLaunchArgument(
-            'output_tensor_names',
-            default_value='["output_tensor"]',
-            description='A list of tensor names to bound to the specified output binding names'),
+            'image_mean',
+            default_value='[0.0, 0.0, 0.0]',
+            description='The mean for image normalization'),
         DeclareLaunchArgument(
-            'output_binding_names',
-            default_value='[""]',
-            description='A list of output tensor binding names (specified by model)'),
+            'image_stddev',
+            default_value='[1.0, 1.0, 1.0]',
+            description='The standard deviation for image normalization'),
         DeclareLaunchArgument(
-            'verbose',
-            default_value='False',
-            description='Whether TensorRT should verbosely log or not'),
+            'confidence_threshold',
+            default_value='0.25',
+            description='Confidence threshold to filter candidate detections during NMS'),
         DeclareLaunchArgument(
-            'force_engine_update',
-            default_value='False',
-            description='Whether TensorRT should update the TensorRT engine file or not'),
+            'nms_threshold',
+            default_value='0.45',
+            description='NMS IOU threshold'),
+
     ]
 
     # DNN Image Encoder parameters
