@@ -2,18 +2,18 @@
 # Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-# SPDX-License-Identifier: Apache-2.0
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 
 import os
 from typing import Any, Dict
@@ -29,7 +29,7 @@ from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
 
 
-class IsaacROSYolov8LaunchFragment(IsaacROSLaunchFragment):
+class IsaacROSYolov26LaunchFragment(IsaacROSLaunchFragment):
 
     @staticmethod
     def get_composable_nodes(interface_specs: Dict[str, Any]) -> Dict[str, ComposableNode]:
@@ -43,11 +43,12 @@ class IsaacROSYolov8LaunchFragment(IsaacROSLaunchFragment):
         output_binding_names = LaunchConfiguration('output_binding_names')
         verbose = LaunchConfiguration('verbose')
         force_engine_update = LaunchConfiguration('force_engine_update')
-        
 
-        # YOLOv8 Decoder parameters
+        # Decoder parameters
         confidence_threshold = LaunchConfiguration('confidence_threshold')
         nms_threshold = LaunchConfiguration('nms_threshold')
+        num_classes = LaunchConfiguration('num_classes')
+        tensor_name = LaunchConfiguration('tensor_name')
 
         return {
             'tensor_rt_node': ComposableNode(
@@ -65,13 +66,15 @@ class IsaacROSYolov8LaunchFragment(IsaacROSLaunchFragment):
                     'force_engine_update': force_engine_update
                 }]
             ),
-            'yolov8_decoder_node': ComposableNode(
-                name='yolov8_decoder_node',
-                package='isaac_ros_yolov8',
-                plugin='nvidia::isaac_ros::yolov8::YoloV8DecoderNode',
+            'yolov26_decoder_node': ComposableNode(
+                name='yolov26_decoder_node',
+                package='isaac_ros_yolov26',
+                plugin='nvidia::isaac_ros::yolov26::YoloV26DecoderNode',
                 parameters=[{
+                    'tensor_name': tensor_name,
                     'confidence_threshold': confidence_threshold,
                     'nms_threshold': nms_threshold,
+                    'num_classes': num_classes,
                 }]
             )
         }
@@ -166,6 +169,11 @@ class IsaacROSYolov8LaunchFragment(IsaacROSLaunchFragment):
                 default_value='False',
                 description='Whether TensorRT should update the TensorRT engine file or not'
             ),
+            'tensor_name': DeclareLaunchArgument(
+                'tensor_name',
+                default_value='output_tensor',
+                description='Name of tensor in NitrosTensorList'
+            ),
             'confidence_threshold': DeclareLaunchArgument(
                 'confidence_threshold',
                 default_value='0.25',
@@ -176,8 +184,12 @@ class IsaacROSYolov8LaunchFragment(IsaacROSLaunchFragment):
                 default_value='0.45',
                 description='NMS IOU threshold'
             ),
-
-            'yolov8_encoder_launch': IncludeLaunchDescription(
+            'num_classes': DeclareLaunchArgument(
+                'num_classes',
+                default_value='80',
+                description='Number of classes'
+            ),
+            'yolov26_encoder_launch': IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     [os.path.join(encoder_dir, 'launch', 'dnn_image_encoder.launch.py')]
                 ),
@@ -190,7 +202,7 @@ class IsaacROSYolov8LaunchFragment(IsaacROSLaunchFragment):
                     'image_stddev': image_stddev,
                     'attach_to_shared_component_container': 'True',
                     'component_container_name': '/isaac_ros_examples/container',
-                    'dnn_image_encoder_namespace': 'yolov8_encoder',
+                    'dnn_image_encoder_namespace': 'yolov26_encoder',
                     'image_input_topic': image_input_topic,
                     'camera_info_input_topic': camera_info_input_topic,
                     'tensor_output_topic': '/tensor_pub',
@@ -200,30 +212,17 @@ class IsaacROSYolov8LaunchFragment(IsaacROSLaunchFragment):
         }
 
 
-
 def generate_launch_description():
-    interface_specs = {
-    'camera_resolution': {'width': 1280, 'height': 720},
-    'camera_name': 'zed',
-    }   
-
-    # Instantiate the container with the nodes
-    yolov8_container = ComposableNodeContainer(
+    yolov26_container = ComposableNodeContainer(
         package='rclcpp_components',
-        name='yolov8_container',
+        name='yolov26_container',
         namespace='',
         executable='component_container_mt',
-        composable_node_descriptions=IsaacROSYolov8LaunchFragment
-            .get_composable_nodes(interface_specs).values(),
+        composable_node_descriptions=IsaacROSYolov26LaunchFragment
+        .get_composable_nodes().values(),
         arguments=['--ros-args', '--log-level', 'INFO'],
         output='screen'
     )
 
-    # Launch description
-    ld = launch.LaunchDescription(
-        [yolov8_container] + list(
-            IsaacROSYolov8LaunchFragment.get_launch_actions(interface_specs).values()
-        )
-    )
-
-    return ld
+    return launch.LaunchDescription(
+        [yolov26_container] + IsaacROSYolov26LaunchFragment.get_launch_actions().values())
