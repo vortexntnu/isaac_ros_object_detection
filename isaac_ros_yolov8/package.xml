@@ -57,6 +57,9 @@
 
   <exec_depend>isaac_ros_tensor_rt</exec_depend>
   <exec_depend>isaac_ros_dnn_image_encoder</exec_depend>
+  <exec_depend>image_transport</exec_depend>
+  <exec_depend>topic_tools</exec_depend>
+  <exec_depend>rqt_image_view</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
