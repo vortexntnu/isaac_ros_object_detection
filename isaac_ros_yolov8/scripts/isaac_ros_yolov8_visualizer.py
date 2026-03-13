@@ -38,26 +38,35 @@ class Yolov8Visualizer(Node):
     def __init__(self):
         super().__init__('yolov8_visualizer')
         self._bridge = cv_bridge.CvBridge()
+
+        self.declare_parameter("detections_topic", "detections_output")
+        self.declare_parameter("image_topic", "/yolov8_encoder/resize/image")
+        self.declare_parameter("output_image_topic", "yolov8_processed_image")
+        self.declare_parameter("class_names_yaml", "{0: 'object'}")
+
+        detections_topic = self.get_parameter("detections_topic").value
+        image_topic = self.get_parameter("image_topic").value
+        output_image_topic = self.get_parameter("output_image_topic").value
+        param = self.get_parameter("class_names_yaml").value
+
         self._processed_image_pub = self.create_publisher(
-            Image, 'yolov8_processed_image',  self.QUEUE_SIZE)
+            Image, output_image_topic, self.QUEUE_SIZE)
 
         self._detections_subscription = message_filters.Subscriber(
             self,
             Detection2DArray,
-            'detections_output')
+            detections_topic)
+
         self._image_subscription = message_filters.Subscriber(
             self,
             Image,
-            '/yolov8_encoder/resize/image')
+            image_topic)
 
         self.time_synchronizer = message_filters.TimeSynchronizer(
             [self._detections_subscription, self._image_subscription],
             self.QUEUE_SIZE)
 
         self.time_synchronizer.registerCallback(self.detections_callback)
-
-        self.declare_parameter('class_names_yaml', "{0: 'object'}")
-        param = self.get_parameter('class_names_yaml').value
 
         if isinstance(param, str):
             self.names = ast.literal_eval(param)

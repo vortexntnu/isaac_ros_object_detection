@@ -46,9 +46,15 @@ public:
 private:
   void InputCallback(const nvidia::isaac_ros::nitros::NitrosTensorListView & msg);
 
+  // Topic name for input tensor data from TensorRTNode
+  std::string tensor_input_topic_{};
+
   // Subscription to input NitrosTensorList messages
   std::shared_ptr<nvidia::isaac_ros::nitros::ManagedNitrosSubscriber<
       nvidia::isaac_ros::nitros::NitrosTensorListView>> nitros_sub_;
+
+  // Topic where detections will be published
+  std::string detections_topic_{};
 
   // Publisher for output Detection2DArray messages
   rclcpp::Publisher<vision_msgs::msg::Detection2DArray>::SharedPtr pub_;
