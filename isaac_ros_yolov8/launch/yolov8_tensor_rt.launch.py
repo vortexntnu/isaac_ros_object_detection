@@ -32,11 +32,11 @@ def generate_launch_description():
     launch_args = [
         DeclareLaunchArgument(
             'model_file_path',
-            default_value='',
+            default_value='best.onnx',
             description='The absolute file path to the ONNX file'),
         DeclareLaunchArgument(
             'engine_file_path',
-            default_value='',
+            default_value='best.engine',
             description='The absolute file path to the TensorRT engine file'),
         DeclareLaunchArgument(
             'input_tensor_names',
@@ -44,7 +44,7 @@ def generate_launch_description():
             description='A list of tensor names to bound to the specified input binding names'),
         DeclareLaunchArgument(
             'input_binding_names',
-            default_value='[""]',
+            default_value='["images"]',
             description='A list of input tensor binding names (specified by model)'),
         DeclareLaunchArgument(
             'output_tensor_names',
@@ -52,7 +52,7 @@ def generate_launch_description():
             description='A list of tensor names to bound to the specified output binding names'),
         DeclareLaunchArgument(
             'output_binding_names',
-            default_value='[""]',
+            default_value='["output0"]',
             description='A list of output tensor binding names (specified by model)'),
         DeclareLaunchArgument(
             'verbose',
@@ -62,6 +62,38 @@ def generate_launch_description():
             'force_engine_update',
             default_value='False',
             description='Whether TensorRT should update the TensorRT engine file or not'),
+        DeclareLaunchArgument(
+            'input_image_width',
+            default_value='1280',
+            description='Input image width from camera'),
+        DeclareLaunchArgument(
+            'input_image_height',
+            default_value='720',
+            description='Input image height from camera'),
+        DeclareLaunchArgument(
+            'network_image_width',
+            default_value='640',
+            description='Width expected by the neural network'),
+        DeclareLaunchArgument(
+            'network_image_height',
+            default_value='640',
+            description='Height expected by the neural network'),
+        DeclareLaunchArgument(
+            'image_mean',
+            default_value='[0.0, 0.0, 0.0]',
+            description='Mean normalization for input image'),
+        DeclareLaunchArgument(
+            'image_stddev',
+            default_value='[1.0, 1.0, 1.0]',
+            description='Stddev normalization for input image'),
+        DeclareLaunchArgument(
+            'confidence_threshold',
+            default_value='0.25',
+            description='Detection confidence threshold'),
+        DeclareLaunchArgument(
+            'nms_threshold',
+            default_value='0.45',
+            description='IOU threshold for non-maximum suppression'),
     ]
 
     # DNN Image Encoder parameters
@@ -101,10 +133,25 @@ def generate_launch_description():
             'attach_to_shared_component_container': 'True',
             'component_container_name': 'tensor_rt_container',
             'dnn_image_encoder_namespace': 'yolov8_encoder',
-            'image_input_topic': '/image',
-            'camera_info_input_topic': '/camera_info',
+            'image_input_topic': '/converted_image',
+            'camera_info_input_topic': '/zed_node/depth/camera_info',
             'tensor_output_topic': '/tensor_pub',
         }.items(),
+    )
+
+    image_format_converter = ComposableNode(
+        package='isaac_ros_image_proc',
+        plugin='nvidia::isaac_ros::image_proc::ImageFormatConverterNode',
+        name='image_format_converter',
+        parameters=[{
+            'encoding_desired': 'rgb8',
+            'image_width': 1280,
+            'image_height': 720,
+        }],
+        remappings=[
+            ('image_raw', '/zed_node/left/image_rect_color'),
+            ('image', '/converted_image')
+        ],
     )
 
     tensor_rt_node = ComposableNode(
@@ -130,6 +177,7 @@ def generate_launch_description():
         parameters=[{
             'confidence_threshold': confidence_threshold,
             'nms_threshold': nms_threshold,
+            'num_classes': 1,
         }]
     )
 
@@ -137,7 +185,7 @@ def generate_launch_description():
         name='tensor_rt_container',
         package='rclcpp_components',
         executable='component_container_mt',
-        composable_node_descriptions=[tensor_rt_node, yolov8_decoder_node],
+        composable_node_descriptions=[image_format_converter,tensor_rt_node, yolov8_decoder_node],
         output='screen',
         arguments=['--ros-args', '--log-level', 'INFO'],
         namespace=''

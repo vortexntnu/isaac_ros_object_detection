@@ -4,3 +4,5 @@
 # Ignore TensorRT plan files
 *.plan
 *.engine
+
+.vscode/
